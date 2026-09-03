@@ -1,0 +1,301 @@
+{
+  "version": "8",
+  "dialect": "postgres",
+  "id": "8ff5dc84-5b05-45f6-aa14-137d5a4a9084",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "isRlsEnabled": false,
+      "name": "products",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "sale_items",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "sales",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "description",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "products"
+    },
+    {
+      "type": "numeric(10,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "price",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "products"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "stock_quantity",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "products"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "category",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "products"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "products"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "products"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sale_items"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "sale_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sale_items"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "product_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sale_items"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "quantity",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sale_items"
+    },
+    {
+      "type": "numeric(10,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "price_at_sale",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sale_items"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sales"
+    },
+    {
+      "type": "numeric(10,2)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "total_amount",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sales"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "sold_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sales"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "sale_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "sales",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "sale_items_sale_id_sales_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "sale_items"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "product_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "products",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "name": "sale_items_product_id_products_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "sale_items"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "products_pkey",
+      "schema": "public",
+      "table": "products",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "sale_items_pkey",
+      "schema": "public",
+      "table": "sale_items",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "sales_pkey",
+      "schema": "public",
+      "table": "sales",
+      "entityType": "pks"
+    }
+  ],
+  "renames": []
+}

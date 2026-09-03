@@ -1,4 +1,4 @@
-import { envs } from './config/envs';
+import 'dotenv/config';
 import { SaleRoutes } from './web/routes/sale.routes';
 import { Server } from './web/server';
 
@@ -12,7 +12,7 @@ async function main() {
       console.log('Initializing application...');
 
       const server = new Server({
-         port: envs.PORT,
+         port: Number(process.env.PORT),
          routes: SaleRoutes.routes,
       });
 
