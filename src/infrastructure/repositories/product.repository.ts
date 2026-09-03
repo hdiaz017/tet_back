@@ -27,7 +27,7 @@ export class DrizzleProductRepository implements ProductRepository {
          .values({
             name: product.name,
             description: product.description,
-            price: String(product.price),
+            price: product.price.toString(),
             stockQuantity: product.stockQuantity,
             category: product.category,
          })
@@ -36,16 +36,19 @@ export class DrizzleProductRepository implements ProductRepository {
    }
 
    async update(product: Product): Promise<Product> {
+      if (!product.id) {
+         throw new Error('Product must have an ID to be updated');
+      }
       const [updated] = await db
          .update(productsTable)
          .set({
             name: product.name,
             description: product.description,
-            price: String(product.price),
+            price: product.price.toString(),
             stockQuantity: product.stockQuantity,
             category: product.category,
          })
-         .where(eq(productsTable.id, product.id!))
+         .where(eq(productsTable.id, product.id))
          .returning();
       return this.mapToEntity(updated);
    }

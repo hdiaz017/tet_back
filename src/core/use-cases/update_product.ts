@@ -12,6 +12,7 @@ export class UpdateProductUseCase {
 
       // Create a new instance with updated values instead of modifying the existing one
       const updatedProduct = new Product(
+         product.id,
          data.name !== undefined ? data.name : product.name,
          data.description !== undefined
             ? data.description
@@ -21,7 +22,6 @@ export class UpdateProductUseCase {
             ? data.stockQuantity
             : product.stockQuantity,
          data.category !== undefined ? data.category : product.category,
-         product.id,
       );
 
       return await this.productRepository.update(updatedProduct);

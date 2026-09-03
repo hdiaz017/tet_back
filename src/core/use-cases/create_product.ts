@@ -12,12 +12,12 @@ export class CreateProductUseCase {
       if (data.stockQuantity! < 0) throw new Error('Stock cannot be negative');
 
       const product = new Product(
+         undefined,
          data.name!,
          data.description!,
          Number(data.price),
          data.stockQuantity!,
          data.category!,
-         undefined,
       );
 
       return await this.productRepository.create(product);
