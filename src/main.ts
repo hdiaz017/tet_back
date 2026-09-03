@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { SaleRoutes } from './web/routes/sale.routes';
+import { AppRoutes } from './web/routes/app.routes';
 import { Server } from './web/server';
 
 (async () => {
@@ -13,7 +13,7 @@ async function main() {
 
       const server = new Server({
          port: Number(process.env.PORT),
-         routes: SaleRoutes.routes,
+         routes: AppRoutes.routes,
       });
 
       await server.start();
