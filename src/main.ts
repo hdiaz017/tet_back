@@ -13,7 +13,7 @@ async function main() {
 
       const server = new Server({
          port: envs.PORT,
-         routes: AppRoutes.routes,
+         routes: SaleRoutes.routes,
       });
 
       await server.start();
