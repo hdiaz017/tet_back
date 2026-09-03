@@ -1,4 +1,4 @@
-import { db } from '../database/db';
+import { db } from '../db/db';
 import { products as productsTable } from '../db/schema';
 import { Product } from '../../core/entities/product';
 import type { ProductRepository } from '../../core/repositories/product.repository';

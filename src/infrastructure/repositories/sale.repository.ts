@@ -1,4 +1,4 @@
-import { db } from '../database/db';
+import { db } from '../db/db';
 import { sales as salesTable, saleItems as saleItemsTable } from '../db/schema';
 import { Sale } from '../../core/entities/sale';
 import type { SaleRepository } from '../../core/repositories/sale.repository';
