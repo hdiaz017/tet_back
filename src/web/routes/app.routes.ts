@@ -9,9 +9,13 @@ export class AppRoutes {
       const productController = new ProductController();
 
       // Sale Routes
+      router.get('/api/sales', saleController.getAllSales);
+      router.get('/api/sales/:id', saleController.getSale);
       router.post('/api/sales', saleController.createSale);
 
       // Product Routes
+      router.get('/api/products', productController.getAllProducts);
+      router.get('/api/products/:id', productController.getProduct);
       router.post('/api/products', productController.createProduct);
       router.put('/api/products/:id', productController.updateProduct);
 

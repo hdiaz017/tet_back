@@ -26,7 +26,7 @@ export class CreateSaleUseCase {
       }
 
       // 2. Create the Sale
-      const sale = new Sale(undefined, items, totalAmount, new Date());
+      const sale = new Sale(items, totalAmount, new Date());
       const savedSale = await this.saleRepository.create(sale);
 
       // 3. Update stock for each item
