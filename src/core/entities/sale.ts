@@ -1,11 +1,12 @@
 export interface SaleItem {
-   productId: number;
+   productId: string;
    quantity: number;
    priceAtSale: number;
 }
 
 export class Sale {
    constructor(
+      public readonly id?: string,
       public readonly items: SaleItem[],
       public readonly totalAmount: number,
       public readonly soldAt?: Date,
