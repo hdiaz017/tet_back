@@ -7,6 +7,7 @@ export interface ProductRecord {
    price: number;
    stockQuantity: number;
    category: string;
+   image: string;
    updatedAt: string;
 }
 

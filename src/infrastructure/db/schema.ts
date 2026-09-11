@@ -15,6 +15,7 @@ export const products = pgTable('products', {
    price: numeric('price', { precision: 10, scale: 2 }).notNull(),
    stockQuantity: integer('stock_quantity').notNull().default(0),
    category: text('category'),
+   image: text('image'),
 
    createdAt: timestamp('created_at').defaultNow(),
    updatedAt: timestamp('updated_at').defaultNow(),

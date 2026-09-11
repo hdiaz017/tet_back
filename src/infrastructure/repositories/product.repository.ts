@@ -30,6 +30,7 @@ export class DrizzleProductRepository implements ProductRepository {
             price: product.price.toString(),
             stockQuantity: product.stockQuantity,
             category: product.category,
+            image: product.image,
          })
          .returning();
       return this.mapToEntity(newProduct);
@@ -48,7 +49,7 @@ export class DrizzleProductRepository implements ProductRepository {
             stockQuantity: product.stockQuantity,
             category: product.category,
          })
-         .where(eq(productsTable.id, product.id))
+         .where(eq(productsTable.id, Number(product.id)))
          .returning();
       return this.mapToEntity(updated);
    }
@@ -65,6 +66,7 @@ export class DrizzleProductRepository implements ProductRepository {
          Number(data.price),
          data.stockQuantity,
          data.category,
+         data.image,
       );
    }
 }

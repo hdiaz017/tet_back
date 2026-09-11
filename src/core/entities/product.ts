@@ -1,11 +1,12 @@
 export class Product {
    constructor(
-      public readonly id?: number,
+      public readonly id?: string,
       public readonly name: string,
       public readonly description: string,
       public readonly price: number,
       private _stockQuantity: number,
       public readonly category: string,
+      public readonly image: string, // Added
    ) {}
 
    // Getter to access the private stock quantity

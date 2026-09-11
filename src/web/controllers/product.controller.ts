@@ -21,7 +21,8 @@ export class ProductController {
 
    public createProduct = async (req: Request, res: Response) => {
       try {
-         const { name, description, price, stockQuantity, category } = req.body;
+         const { name, description, price, stockQuantity, category, image } =
+            req.body;
 
          const product = await this.createProductUseCase.execute({
             name,
@@ -29,6 +30,7 @@ export class ProductController {
             price,
             stockQuantity,
             category,
+            image,
          });
 
          return res.status(201).json({

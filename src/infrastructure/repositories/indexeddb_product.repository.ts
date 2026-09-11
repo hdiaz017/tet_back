@@ -1,6 +1,7 @@
 import { Product } from '../../core/entities/product';
 import { db, type ProductRecord } from '../db/indexeddb';
 import type { ProductRepository } from '../../core/repositories/product.repository';
+
 export class IndexedDbProductRepository implements ProductRepository {
    async findById(id: number): Promise<Product | null> {
       const product = await db.products.get(id.toString());
@@ -23,12 +24,13 @@ export class IndexedDbProductRepository implements ProductRepository {
       if (!product.id) {
          throw new Error('Product must have an ID to be updated');
       }
-      await db.products.update(product.id.toString(), {
+      await db.products.update(product.id, {
          name: product.name,
          description: product.description,
          price: product.price,
          stockQuantity: product.stockQuantity,
          category: product.category,
+         image: product.image,
          updatedAt: new Date().toISOString(),
       });
       return product;
@@ -40,12 +42,13 @@ export class IndexedDbProductRepository implements ProductRepository {
 
    private mapToEntity(data: ProductRecord): Product {
       return new Product(
-         data.id,
+         data.id.toString(),
          data.name,
          data.description,
          Number(data.price),
          data.stockQuantity,
          data.category,
+         data.image,
       );
    }
 }

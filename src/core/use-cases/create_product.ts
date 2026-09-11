@@ -9,15 +9,17 @@ export class CreateProductUseCase {
       if (!data.name) throw new Error('Product name is required');
       if (data.price === undefined || data.price < 0)
          throw new Error('A valid price is required');
-      if (data.stockQuantity! < 0) throw new Error('Stock cannot be negative');
+      if (data.stockQuantity !== undefined && data.stockQuantity < 0)
+         throw new Error('Stock cannot be negative');
 
       const product = new Product(
          undefined,
          data.name!,
-         data.description!,
+         data.description || '',
          Number(data.price),
-         data.stockQuantity!,
-         data.category!,
+         data.stockQuantity ?? 0,
+         data.category || '',
+         data.image || '',
       );
 
       return await this.productRepository.create(product);
