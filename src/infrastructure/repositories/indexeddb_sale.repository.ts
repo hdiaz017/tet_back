@@ -1,6 +1,5 @@
 import { Sale } from '../../core/entities/sale';
 import type { SaleRepository } from '../../core/repositories/sale.repository';
-
 import {
    db,
    type SaleItemRecord,
