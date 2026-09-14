@@ -1,117 +1,221 @@
 import { db } from '../db/db';
-import { sales as salesTable, saleItems as saleItemsTable } from '../db/schema';
+import {
+   sales as salesTable,
+   saleItems as saleItemsTable,
+   products as productsTable,
+} from '../db/schema';
 import { Sale, type SaleItem } from '../../core/entities/sale';
 import type { SaleRepository } from '../../core/repositories/sale.repository';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
-// Explicit type for the database row to ensure full type safety
 interface SaleRow {
-   id: number;
-   totalAmount: string; // numeric is string in Drizzle
-   soldAt: Date | string | null;
+   id: string; // UUID
+   externalSaleId: string;
+   totalAmount: string;
+   soldAt: Date;
+}
+
+interface ProductRow {
+   id: string;
+   name: string;
+   stockQuantity: number;
+}
+
+interface SaleItemRow {
+   productId: string;
+   quantity: number;
+   priceAtSale: string;
+}
+
+interface SaleWithItemsRow {
+   id: string;
+   externalSaleId: string;
+   totalAmount: string;
+   soldAt: Date;
+   // Join fields (pueden ser null)
+   itemId: string | null;
+   productId: string | null;
+   quantity: number | null;
+   priceAtSale: string | null;
 }
 
 export class DrizzleSaleRepository implements SaleRepository {
+   /**
+    * Crear una venta con idempotencia y validación completa en transacción
+    */
    async create(sale: Sale): Promise<Sale> {
-      // 1. Insert into sales table
-      const results = await db
-         .insert(salesTable)
-         .values({
-            totalAmount: sale.totalAmount.toString(),
-            soldAt: sale.soldAt,
-         })
-         .returning({
-            id: salesTable.id,
-            totalAmount: salesTable.totalAmount,
-            soldAt: salesTable.soldAt,
-         });
+      return await db.transaction(async (tx) => {
+         // 1️⃣ DETECTAR DUPLICADO por externalSaleId
+         const existing: SaleRow[] = await tx
+            .select({
+               id: salesTable.id,
+               externalSaleId: salesTable.externalSaleId,
+               totalAmount: salesTable.totalAmount,
+               soldAt: salesTable.soldAt,
+            })
+            .from(salesTable)
+            .where(eq(salesTable.externalSaleId, sale.externalSaleId))
+            .limit(1);
 
-      if (results.length === 0) {
-         throw new Error('Failed to create sale record');
-      }
+         if (existing.length > 0) {
+            const existingSale = existing.at(0);
+            if (!existingSale) {
+               throw new Error('Sale not found'); // o return null
+            }
+            // La venta ya existe → retornar como si fuera nueva (idempotente)
+            const existingItems: SaleItemRow[] = await tx
+               .select({
+                  productId: saleItemsTable.productId,
+                  quantity: saleItemsTable.quantity,
+                  priceAtSale: saleItemsTable.priceAtSale,
+               })
+               .from(saleItemsTable)
+               .where(eq(saleItemsTable.saleId, existingSale.id));
 
-      const newSale = results[0] as SaleRow;
-
-      // 2. Insert into sale_items table
-      const itemsToInsert = sale.items.map((item) => ({
-         saleId: newSale.id,
-         productId: item.productId,
-         quantity: item.quantity,
-         priceAtSale: item.priceAtSale.toString(),
-      }));
-
-      await db.insert(saleItemsTable).values(itemsToInsert);
-
-      return this.mapToEntity(newSale, sale.items);
-   }
-
-   async findAll(): Promise<Sale[]> {
-      // Perform a join between sales and sale_items
-      const rows = await db
-         .select({
-            id: salesTable.id,
-            totalAmount: salesTable.totalAmount,
-            soldAt: salesTable.soldAt,
-            // We select the whole item row to handle the One-to-Many relationship
-            items: saleItemsTable,
-         })
-         .from(salesTable)
-         .leftJoin(saleItemsTable, eq(salesTable.id, saleItemsTable.saleId));
-
-      // Because a JOIN returns a row for every item, we need to group them.
-      // We use a Map to ensure each Sale ID only appears once.
-      const salesMap = new Map<number, Sale>();
-
-      for (const row of rows) {
-         if (!salesMap.has(row.id)) {
-            salesMap.set(
-               row.id,
-               this.mapToEntity(
-                  {
-                     id: row.id,
-                     totalAmount: row.totalAmount,
-                     soldAt: row.soldAt,
-                  },
-                  [] as SaleItem[],
-               ),
+            return new Sale(
+               existingSale.externalSaleId,
+               existingItems.map((item) => ({
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  priceAtSale: Number(item.priceAtSale),
+               })),
+               Number(existingSale.totalAmount),
+               existingSale.id,
+               existingSale.soldAt,
             );
          }
 
-         if (row.items) {
-            const sale = salesMap.get(row.id)!;
-            // row.items might be an array or a single object depending on Drizzle version,
-            // but usually in this join it returns an array of items
-            if (Array.isArray(row.items)) {
-               sale.items.push(
-                  ...row.items.map((item) => ({
-                     productId: item.productId,
-                     quantity: item.quantity,
-                     priceAtSale: Number(item.priceAtSale),
-                  })),
+         // 2️⃣ VALIDAR Y CARGAR PRODUCTOS
+         const productIds = sale.items.map((item) => item.productId);
+         const products: ProductRow[] = await tx
+            .select()
+            .from(productsTable)
+            .where(inArray(productsTable.id, productIds));
+
+         if (products.length !== productIds.length) {
+            throw new Error('One or more products not found');
+         }
+
+         // 3️⃣ VALIDAR STOCK
+         for (const item of sale.items) {
+            const product = products.find((p) => p.id === item.productId);
+            if (!product) {
+               throw new Error(`Product not found: ${item.productId}`);
+            }
+            if (product.stockQuantity < item.quantity) {
+               throw new Error(
+                  `Insufficient stock for product ${product.name}. ` +
+                     `Available: ${product.stockQuantity}, Requested: ${item.quantity}`,
                );
-            } else {
-               // Handle case where only one item exists
-               sale.items.push({
-                  productId: row.items.productId,
-                  quantity: row.items.quantity,
-                  priceAtSale: Number(row.items.priceAtSale),
-               });
             }
          }
-      }
 
-      return Array.from(salesMap.values());
+         // 4️⃣ CREAR SALE
+         const newSaleResult: SaleRow[] = await tx
+            .insert(salesTable)
+            .values({
+               externalSaleId: sale.externalSaleId,
+               totalAmount: sale.totalAmount.toString(),
+               soldAt: sale.soldAt ?? new Date(),
+            })
+            .returning({
+               id: salesTable.id,
+               externalSaleId: salesTable.externalSaleId,
+               totalAmount: salesTable.totalAmount,
+               soldAt: salesTable.soldAt,
+            });
+
+         const newSale = newSaleResult.at(0); // ✅ TypeScript sabe que es SaleRow
+         if (!newSale) {
+            throw new Error('Failed to create sale record'); // o return null
+         }
+
+         // 5️⃣ CREAR SALE_ITEMS
+         const itemsToInsert = sale.items.map((item) => ({
+            saleId: newSale.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            priceAtSale: item.priceAtSale.toString(),
+         }));
+
+         await tx.insert(saleItemsTable).values(itemsToInsert);
+
+         // 6️⃣ ACTUALIZAR STOCK EN PRODUCTOS
+         for (const item of sale.items) {
+            await tx
+               .update(productsTable)
+               .set({
+                  stockQuantity: sql`${productsTable.stockQuantity} - ${item.quantity}`,
+               })
+               .where(eq(productsTable.id, item.productId));
+         }
+
+         // Retornar Sale reconstructida
+         return new Sale(
+            newSale.externalSaleId,
+            sale.items,
+            sale.totalAmount,
+            newSale.id,
+            newSale.soldAt,
+         );
+      });
    }
 
-   async findById(id: number): Promise<Sale | null> {
-      // We fetch all rows that match this ID.
-      // If there are 3 items, this will return 3 rows.
-      const rows = await db
+   /**
+    * Buscar por externalSaleId (para validar antes de crear)
+    */
+   async findByExternalSaleId(externalSaleId: string): Promise<Sale | null> {
+      const rows: SaleWithItemsRow[] = await db
          .select({
             id: salesTable.id,
+            externalSaleId: salesTable.externalSaleId,
             totalAmount: salesTable.totalAmount,
             soldAt: salesTable.soldAt,
-            items: saleItemsTable,
+            itemId: saleItemsTable.id,
+            productId: saleItemsTable.productId,
+            quantity: saleItemsTable.quantity,
+            priceAtSale: saleItemsTable.priceAtSale,
+         })
+         .from(salesTable)
+         .leftJoin(saleItemsTable, eq(salesTable.id, saleItemsTable.saleId))
+         .where(eq(salesTable.externalSaleId, externalSaleId));
+
+      if (rows.length === 0) return null;
+
+      const [firstRow] = rows;
+      if (!firstRow) return null;
+      const items: SaleItem[] = rows
+         .filter((row) => row.itemId !== null)
+         .map((row) => ({
+            productId: row.productId ?? '',
+            quantity: row.quantity ?? 0,
+            priceAtSale: Number(row.priceAtSale ?? 0),
+         }));
+
+      return new Sale(
+         firstRow.externalSaleId,
+         items,
+         Number(firstRow.totalAmount),
+         firstRow.id,
+         firstRow.soldAt,
+      );
+   }
+
+   /**
+    * Buscar por ID (UUID)
+    */
+   async findById(id: string): Promise<Sale | null> {
+      const rows: SaleWithItemsRow[] = await db
+         .select({
+            id: salesTable.id,
+            externalSaleId: salesTable.externalSaleId,
+            totalAmount: salesTable.totalAmount,
+            soldAt: salesTable.soldAt,
+            itemId: saleItemsTable.id,
+            productId: saleItemsTable.productId,
+            quantity: saleItemsTable.quantity,
+            priceAtSale: saleItemsTable.priceAtSale,
          })
          .from(salesTable)
          .leftJoin(saleItemsTable, eq(salesTable.id, saleItemsTable.saleId))
@@ -119,55 +223,69 @@ export class DrizzleSaleRepository implements SaleRepository {
 
       if (rows.length === 0) return null;
 
-      // We use a Map or a simple loop to aggregate the items from all returned rows
-      const saleMap = new Map<number, Sale>();
+      const [firstRow] = rows;
+      if (!firstRow) return null;
+      const items: SaleItem[] = rows
+         .filter((row) => row.itemId !== null)
+         .map((row) => ({
+            productId: row.productId ?? '',
+            quantity: row.quantity ?? 0,
+            priceAtSale: Number(row.priceAtSale ?? 0),
+         }));
+
+      return new Sale(
+         firstRow.externalSaleId,
+         items,
+         Number(firstRow.totalAmount),
+         firstRow.id,
+         firstRow.soldAt,
+      );
+   }
+
+   /**
+    * Buscar todas las ventas
+    */
+   async findAll(): Promise<Sale[]> {
+      const rows: SaleWithItemsRow[] = await db
+         .select({
+            id: salesTable.id,
+            externalSaleId: salesTable.externalSaleId,
+            totalAmount: salesTable.totalAmount,
+            soldAt: salesTable.soldAt,
+            itemId: saleItemsTable.id,
+            productId: saleItemsTable.productId,
+            quantity: saleItemsTable.quantity,
+            priceAtSale: saleItemsTable.priceAtSale,
+         })
+         .from(salesTable)
+         .leftJoin(saleItemsTable, eq(salesTable.id, saleItemsTable.saleId));
+
+      const salesMap = new Map<string, Sale>();
 
       for (const row of rows) {
-         if (!saleMap.has(row.id)) {
-            saleMap.set(
+         if (!salesMap.has(row.id)) {
+            salesMap.set(
                row.id,
-               this.mapToEntity(
-                  {
-                     id: row.id,
-                     totalAmount: row.totalAmount,
-                     soldAt: row.soldAt,
-                  },
-                  [] as SaleItem[],
+               new Sale(
+                  row.externalSaleId,
+                  [],
+                  Number(row.totalAmount),
+                  row.id,
+                  row.soldAt,
                ),
             );
          }
 
-         if (row.items) {
-            const sale = saleMap.get(row.id)!;
-            // Since we are iterating over all rows for this ID,
-            // this will now pick up every item associated with the sale.
-            if (Array.isArray(row.items)) {
-               sale.items.push(
-                  ...row.items.map((item) => ({
-                     productId: item.productId,
-                     quantity: item.quantity,
-                     priceAtSale: Number(item.priceAtSale),
-                  })),
-               );
-            } else {
-               sale.items.push({
-                  productId: row.items.productId,
-                  quantity: row.items.quantity,
-                  priceAtSale: Number(row.items.priceAtSale),
-               });
-            }
+         if (row.itemId) {
+            const sale = salesMap.get(row.id)!;
+            sale['items'].push({
+               productId: row.productId ?? '',
+               quantity: row.quantity ?? 0,
+               priceAtSale: Number(row.priceAtSale ?? 0),
+            });
          }
       }
 
-      return saleMap.get(id) || null;
-   }
-
-   private mapToEntity(saleData: SaleRow, items: SaleItem[]): Sale {
-      return new Sale(
-         saleData.id,
-         items,
-         Number(saleData.totalAmount),
-         saleData.soldAt ? new Date(saleData.soldAt) : undefined,
-      );
+      return Array.from(salesMap.values());
    }
 }
