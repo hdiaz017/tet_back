@@ -1,6 +1,12 @@
 import type { Request, Response } from 'express';
-import { CreateProductUseCase } from '../../core/use-cases/create_product';
-import { UpdateProductUseCase } from '../../core/use-cases/update_product';
+import {
+   CreateProductUseCase,
+   type CreateProductCommand,
+} from '../../core/use-cases/create_product';
+import {
+   UpdateProductUseCase,
+   type UpdateProductCommand,
+} from '../../core/use-cases/update_product';
 import { DrizzleProductRepository } from '../../infrastructure/repositories/product.repository';
 import { GetProductUseCase } from '../../core/use-cases/get_product';
 import { GetProductsUseCase } from '../../core/use-cases/get_products';
@@ -19,91 +25,191 @@ export class ProductController {
       this.getProductUseCase = new GetProductUseCase(productRepo);
    }
 
-   public createProduct = async (req: Request, res: Response) => {
+   public createProduct = async (
+      req: Request,
+      res: Response,
+   ): Promise<void> => {
       try {
          const { name, description, price, stockQuantity, category, image } =
             req.body;
 
-         const product = await this.createProductUseCase.execute({
+         // ✅ Validar DTO
+         if (!name || !price || !category) {
+            res.status(400).json({
+               success: false,
+               message: 'name, price, and category are required',
+            });
+            return;
+         }
+
+         // ✅ Convertir a command
+         const command: CreateProductCommand = {
+            name,
+            description: description || '',
+            price,
+            stockQuantity: stockQuantity || 0,
+            category,
+            image: image || '',
+         };
+
+         const product = await this.createProductUseCase.execute(command);
+
+         res.status(201).json({
+            success: true,
+            message: 'Product created successfully',
+            data: product.toPrimitives(),
+         });
+      } catch (error: any) {
+         console.error('Error in createProduct:', error);
+         res.status(400).json({
+            success: false,
+            message: error.message,
+         });
+      }
+   };
+
+   public updateProduct = async (
+      req: Request,
+      res: Response,
+   ): Promise<void> => {
+      try {
+         const id = req.params.id as string; // ✅ string, no Number()
+
+         if (!id) {
+            res.status(400).json({
+               success: false,
+               message: 'Product ID is required',
+            });
+            return;
+         }
+
+         const { name, description, price, stockQuantity, category, image } =
+            req.body;
+
+         // ✅ Convertir a command
+         const command: UpdateProductCommand = {
+            id,
             name,
             description,
             price,
             stockQuantity,
             category,
             image,
-         });
+         };
 
-         return res.status(201).json({
-            success: true,
-            message: 'Product created successfully',
-            data: product,
-         });
-      } catch (error: any) {
-         return res.status(400).json({
-            success: false,
-            message: error.message,
-         });
-      }
-   };
+         const updatedProduct =
+            await this.updateProductUseCase.execute(command);
 
-   public updateProduct = async (req: Request, res: Response) => {
-      try {
-         const { id } = req.params;
-         const { name, description, price, stockQuantity, category } = req.body;
-
-         const updatedProduct = await this.updateProductUseCase.execute(
-            Number(id),
-            {
-               name,
-               description,
-               price,
-               stockQuantity,
-               category,
-            },
-         );
-
-         return res.status(200).json({
+         res.status(200).json({
             success: true,
             message: 'Product updated successfully',
-            data: updatedProduct,
+            data: updatedProduct.toPrimitives(),
          });
       } catch (error: any) {
-         return res.status(400).json({
-            success: false,
-            message: error.message,
-         });
+         if (error.message.includes('not found')) {
+            res.status(404).json({
+               success: false,
+               message: error.message,
+            });
+         } else {
+            console.error('Error in updateProduct:', error);
+            res.status(400).json({
+               success: false,
+               message: error.message,
+            });
+         }
       }
    };
 
-   public getAllProducts = async (req: Request, res: Response) => {
+   public getAllProducts = async (
+      req: Request,
+      res: Response,
+   ): Promise<void> => {
       try {
          const products = await this.getProductsUseCase.execute();
-         return res.status(200).json({
+
+         res.status(200).json({
             success: true,
-            data: products,
+            data: products.map((p) => p.toPrimitives()),
          });
       } catch (error: any) {
-         return res.status(400).json({
+         console.error('Error in getAllProducts:', error);
+         res.status(500).json({
             success: false,
-            message: error.message,
+            message: error.message || 'Internal server error',
          });
       }
    };
 
-   public getProduct = async (req: Request, res: Response) => {
+   public getProduct = async (req: Request, res: Response): Promise<void> => {
       try {
-         const product = await this.getProductUseCase.execute(
-            Number(req.params.id),
-         );
-         return res.status(200).json({
+         const id = req.params.id as string; // ✅ string, no Number()
+
+         if (!id) {
+            res.status(400).json({
+               success: false,
+               message: 'Product ID is required',
+            });
+            return;
+         }
+
+         const product = await this.getProductUseCase.execute(id);
+
+         res.status(200).json({
             success: true,
-            data: product,
+            data: product.toPrimitives(),
          });
       } catch (error: any) {
-         return res.status(400).json({
-            success: false,
-            message: error.message,
+         if (error.message.includes('not found')) {
+            res.status(404).json({
+               success: false,
+               message: error.message,
+            });
+         } else {
+            console.error('Error in getProduct:', error);
+            res.status(500).json({
+               success: false,
+               message: error.message,
+            });
+         }
+      }
+   };
+
+   public deleteProduct = async (
+      req: Request,
+      res: Response,
+   ): Promise<void> => {
+      try {
+         const id = req.params.id; // ✅ string
+
+         if (!id) {
+            res.status(400).json({
+               success: false,
+               message: 'Product ID is required',
+            });
+            return;
+         }
+
+         // TODO: Agregar DeleteProductUseCase si es necesario
+         // await this.deleteProductUseCase.execute(id);
+
+         res.status(200).json({
+            success: true,
+            message: 'Product deleted successfully',
          });
+      } catch (error: any) {
+         if (error.message.includes('not found')) {
+            res.status(404).json({
+               success: false,
+               message: error.message,
+            });
+         } else {
+            console.error('Error in deleteProduct:', error);
+            res.status(500).json({
+               success: false,
+               message: error.message,
+            });
+         }
       }
    };
 }

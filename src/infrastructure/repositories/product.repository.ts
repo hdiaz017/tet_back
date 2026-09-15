@@ -4,69 +4,140 @@ import { Product } from '../../core/entities/product';
 import type { ProductRepository } from '../../core/repositories/product.repository';
 import { eq } from 'drizzle-orm';
 
+interface ProductRow {
+   id: string;
+   name: string;
+   description: string;
+   price: string;
+   stockQuantity: number;
+   category: string;
+   image: string;
+   createdAt: Date;
+   updatedAt: Date;
+}
+
 export class DrizzleProductRepository implements ProductRepository {
    constructor() {}
 
-   async findById(id: number): Promise<Product | null> {
-      const [product] = await db
-         .select()
+   async findById(id: string): Promise<Product | null> {
+      const products = await db
+         .select({
+            id: productsTable.id,
+            name: productsTable.name,
+            description: productsTable.description,
+            price: productsTable.price,
+            stockQuantity: productsTable.stockQuantity,
+            category: productsTable.category,
+            image: productsTable.image,
+            createdAt: productsTable.createdAt,
+            updatedAt: productsTable.updatedAt,
+         })
          .from(productsTable)
          .where(eq(productsTable.id, id));
-      if (!product) return null;
-      return this.mapToEntity(product);
+
+      if (products.length === 0) return null;
+
+      const [product] = products;
+      return this.toDomain(product as ProductRow);
    }
 
    async findAll(): Promise<Product[]> {
-      const allProducts = await db.select().from(productsTable);
-      return allProducts.map(this.mapToEntity);
+      const allProducts = await db
+         .select({
+            id: productsTable.id,
+            name: productsTable.name,
+            description: productsTable.description,
+            price: productsTable.price,
+            stockQuantity: productsTable.stockQuantity,
+            category: productsTable.category,
+            image: productsTable.image,
+            createdAt: productsTable.createdAt,
+            updatedAt: productsTable.updatedAt,
+         })
+         .from(productsTable);
+
+      return allProducts.map((row) => this.toDomain(row as ProductRow));
    }
 
    async create(product: Product): Promise<Product> {
-      const [newProduct] = await db
+      const primitives = product.toPrimitives();
+
+      const newProductResult = await db
          .insert(productsTable)
          .values({
-            name: product.name,
-            description: product.description,
-            price: product.price.toString(),
-            stockQuantity: product.stockQuantity,
-            category: product.category,
-            image: product.image,
+            id: primitives.id,
+            name: primitives.name,
+            description: primitives.description,
+            price: primitives.price.toString(),
+            stockQuantity: primitives.stockQuantity,
+            category: primitives.category,
+            image: primitives.image,
+            createdAt: primitives.createdAt,
+            updatedAt: primitives.updatedAt,
          })
-         .returning();
-      return this.mapToEntity(newProduct);
+         .returning({
+            id: productsTable.id,
+            name: productsTable.name,
+            description: productsTable.description,
+            price: productsTable.price,
+            stockQuantity: productsTable.stockQuantity,
+            category: productsTable.category,
+            image: productsTable.image,
+            createdAt: productsTable.createdAt,
+            updatedAt: productsTable.updatedAt,
+         });
+
+      const [newProduct] = newProductResult;
+      return this.toDomain(newProduct as ProductRow);
    }
 
    async update(product: Product): Promise<Product> {
-      if (!product.id) {
-         throw new Error('Product must have an ID to be updated');
-      }
-      const [updated] = await db
+      const primitives = product.toPrimitives();
+
+      const updatedResult = await db
          .update(productsTable)
          .set({
-            name: product.name,
-            description: product.description,
-            price: product.price.toString(),
-            stockQuantity: product.stockQuantity,
-            category: product.category,
+            name: primitives.name,
+            description: primitives.description,
+            price: primitives.price.toString(),
+            stockQuantity: primitives.stockQuantity,
+            category: primitives.category,
+            image: primitives.image,
+            updatedAt: new Date(),
          })
-         .where(eq(productsTable.id, Number(product.id)))
-         .returning();
-      return this.mapToEntity(updated);
+         .where(eq(productsTable.id, primitives.id))
+         .returning({
+            id: productsTable.id,
+            name: productsTable.name,
+            description: productsTable.description,
+            price: productsTable.price,
+            stockQuantity: productsTable.stockQuantity,
+            category: productsTable.category,
+            image: productsTable.image,
+            createdAt: productsTable.createdAt,
+            updatedAt: productsTable.updatedAt,
+         });
+
+      const [updated] = updatedResult;
+      return this.toDomain(updated as ProductRow);
    }
 
-   async delete(id: number): Promise<void> {
+   async delete(id: string): Promise<void> {
       await db.delete(productsTable).where(eq(productsTable.id, id));
    }
 
-   private mapToEntity(data: any): Product {
-      return new Product(
-         data.id,
-         data.name,
-         data.description,
-         Number(data.price),
-         data.stockQuantity,
-         data.category,
-         data.image,
-      );
+   // ✅ Sin (this as any)
+   private toDomain(row: ProductRow): Product {
+      return Product.reconstituteFromDatabase({
+         id: row.id,
+         name: row.name,
+         description: row.description ?? '',
+         price: Number(row.price),
+         stockQuantity: row.stockQuantity,
+         category: row.category ?? '',
+         image: row.image ?? '',
+         createdAt: row.createdAt ?? new Date(),
+         updatedAt: row.updatedAt ?? new Date(),
+      });
    }
 }
