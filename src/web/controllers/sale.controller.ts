@@ -5,10 +5,12 @@ import type { CreateSaleCommand } from '../../core/use-cases/create_sale.command
 import { DrizzleSaleRepository } from '../../infrastructure/repositories/sale.repository';
 import { GetSaleUseCase } from '../../core/use-cases/get_sale';
 import { GetSalesUseCase } from '../../core/use-cases/get_sales';
+import { GetSaleExternalUseCase } from '../../core/use-cases/get_sale.external';
 export class SaleController {
    private createSaleUseCase: CreateSaleUseCase;
    private getAllSalesUseCase: GetSalesUseCase;
    private getSaleUseCase: GetSaleUseCase;
+   private getSaleExternalUseCase: GetSaleExternalUseCase;
 
    constructor() {
       // Wiring up dependencies
@@ -17,6 +19,7 @@ export class SaleController {
       this.createSaleUseCase = new CreateSaleUseCase(saleRepo);
       this.getAllSalesUseCase = new GetSalesUseCase(saleRepo);
       this.getSaleUseCase = new GetSaleUseCase(saleRepo);
+      this.getSaleExternalUseCase = new GetSaleExternalUseCase(saleRepo);
    }
 
    public createSale = async (req: Request, res: Response) => {
@@ -121,8 +124,8 @@ export class SaleController {
             return;
          }
 
-         const sale = await (this as any).saleRepo.findByExternalSaleId(
-            externalSaleId,
+         const sale = await this.getSaleExternalUseCase.execute(
+            externalSaleId as string,
          );
 
          if (!sale) {
