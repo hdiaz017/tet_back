@@ -4,7 +4,10 @@ import type { SaleRepository } from '../repositories/sale.repository';
 export class GetSaleUseCase {
    constructor(private saleRepository: SaleRepository) {}
 
-   async execute(id: number): Promise<Sale> {
+   async execute(id: string): Promise<Sale> {
+      if (!id || id.trim() === '') {
+         throw new Error('Sale ID is required');
+      }
       const sale = await this.saleRepository.findById(id);
       if (!sale) {
          throw new Error('Sale not found');

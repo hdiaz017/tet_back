@@ -11,6 +11,7 @@ export class AppRoutes {
       // Sale Routes
       router.get('/api/sales', saleController.getAllSales);
       router.get('/api/sales/:id', saleController.getSale);
+      router.get('/api/sales/external/:externalSaleId', saleController.getSale);
       router.post('/api/sales', saleController.createSale);
 
       // Product Routes

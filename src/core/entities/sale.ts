@@ -37,4 +37,14 @@ export class Sale {
          throw new Error('totalAmount does not match calculated total');
       }
    }
+
+   toPrimitives() {
+      return {
+         id: this.id,
+         externalSaleId: this.externalSaleId,
+         items: this.items,
+         totalAmount: this.totalAmount,
+         soldAt: this.soldAt,
+      };
+   }
 }
