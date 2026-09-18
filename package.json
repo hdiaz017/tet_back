@@ -12,6 +12,7 @@
   "license": "ISC",
   "packageManager": "pnpm@11.24.0",
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "dexie": "^4.4.5",
     "dotenv": "^17.4.2",
     "drizzle-orm": "1.0.0-rc.4",

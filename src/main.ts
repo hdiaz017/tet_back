@@ -13,7 +13,6 @@ async function main() {
 
       const server = new Server({
          port: Number(process.env.PORT),
-         routes: AppRoutes.routes,
       });
 
       await server.start();

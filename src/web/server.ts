@@ -1,9 +1,13 @@
 import express, { Router, type Express } from 'express';
 import path from 'path';
+import { SupabaseAuthRepository } from '../infrastructure/auth/supabase_auth.repository';
+import { VerifyTokenUseCase } from '../core/use-cases/verify_token';
+import { createAuthMiddleware } from '../infrastructure/auth/authenticate.middleware';
+import { AppRoutes } from './routes/app.routes';
 
 interface Options {
    port: number;
-   routes: Router;
+
    public_path?: string;
 }
 
@@ -12,13 +16,12 @@ export class Server {
    private serverListener?: any;
    private readonly port: number;
    private readonly publicPath: string;
-   private readonly routes: Router;
 
    constructor(options: Options) {
-      const { port, routes, public_path = 'public' } = options;
+      const { port, public_path = 'public' } = options;
       this.port = port;
       this.publicPath = public_path;
-      this.routes = routes;
+
       this.app = express();
    }
 
@@ -27,8 +30,13 @@ export class Server {
       this.app.use(express.json());
       this.app.use(express.urlencoded({ extended: true }));
 
+      // DI
+      const authRepository = new SupabaseAuthRepository();
+      const verifyTokenUseCase = new VerifyTokenUseCase(authRepository);
+      const authenticate = createAuthMiddleware(verifyTokenUseCase);
+
       // Routes
-      this.app.use(this.routes);
+      this.app.use(AppRoutes.create(authenticate));
 
       this.serverListener = this.app.listen(this.port, () => {
          console.log(`Server running on port ${this.port}`);
