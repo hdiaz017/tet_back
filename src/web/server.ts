@@ -1,5 +1,6 @@
 import express, { Router, type Express } from 'express';
 import path from 'path';
+import cors from 'cors';
 import { SupabaseAuthRepository } from '../infrastructure/auth/supabase_auth.repository';
 import { VerifyTokenUseCase } from '../core/use-cases/verify_token';
 import { createAuthMiddleware } from '../infrastructure/auth/authenticate.middleware';
@@ -26,6 +27,13 @@ export class Server {
    }
 
    async start() {
+      // Cors
+      this.app.use(
+         cors({
+            origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+            credentials: true,
+         }),
+      );
       // Middlewares
       this.app.use(express.json());
       this.app.use(express.urlencoded({ extended: true }));
