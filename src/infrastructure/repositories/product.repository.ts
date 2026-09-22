@@ -2,7 +2,7 @@ import { db } from '../db/db';
 import { products as productsTable } from '../db/schema';
 import { Product } from '../../core/entities/product';
 import type { ProductRepository } from '../../core/repositories/product.repository';
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 
 interface ProductRow {
    id: string;
@@ -54,7 +54,8 @@ export class DrizzleProductRepository implements ProductRepository {
             createdAt: productsTable.createdAt,
             updatedAt: productsTable.updatedAt,
          })
-         .from(productsTable);
+         .from(productsTable)
+         .orderBy(asc(productsTable.category), asc(productsTable.name));
 
       return allProducts.map((row) => this.toDomain(row as ProductRow));
    }
