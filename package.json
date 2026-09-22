@@ -5,8 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts"
-  },
+  "dev": "tsx watch src/main.ts",
+  "start": "tsx src/main.ts"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
